@@ -41,6 +41,7 @@ partial class MainForm
         _setPositionButton = new Button();
         _addWaypointButton = new Button();
         _clearWaypointsButton = new Button();
+        _exportGpxButton = new Button();
         _startNetworkButton = new Button();
         _stopNetworkButton = new Button();
         _enableTcpCheckBox = new CheckBox();
@@ -286,8 +287,17 @@ partial class MainForm
         _clearWaypointsButton.Text = "Clear Waypoints";
         _clearWaypointsButton.Click += ClearWaypointsButton_Click;
         // 
-        // _startNetworkButton
+        // _exportGpxButton
         // 
+        _exportGpxButton.Location = new Point(410, 240);
+        _exportGpxButton.Name = "_exportGpxButton";
+        _exportGpxButton.Size = new Size(100, 30);
+        _exportGpxButton.TabIndex = 13;
+        _exportGpxButton.Text = "Export GPX";
+        _exportGpxButton.Click += ExportGpxButton_Click;
+        //
+        // _startNetworkButton
+        //
         _startNetworkButton.Location = new Point(520, 160);
         _startNetworkButton.Name = "_startNetworkButton";
         _startNetworkButton.Size = new Size(100, 30);
@@ -480,6 +490,7 @@ partial class MainForm
         Controls.Add(_setPositionButton);
         Controls.Add(_addWaypointButton);
         Controls.Add(_clearWaypointsButton);
+        Controls.Add(_exportGpxButton);
         Controls.Add(networkLabel);
         Controls.Add(_enableTcpCheckBox);
         Controls.Add(tcpPortLabel);

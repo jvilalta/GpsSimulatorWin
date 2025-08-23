@@ -2,6 +2,10 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using WinFormsTimer = System.Windows.Forms.Timer;
+using System.Text;
+using System.Xml;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace GpsSimulator
 {
@@ -42,6 +46,7 @@ namespace GpsSimulator
         private Button _setPositionButton;
         private Button _addWaypointButton;
         private Button _clearWaypointsButton;
+        private Button _exportGpxButton;
         private Button _startNetworkButton;
         private Button _stopNetworkButton;
         
@@ -216,6 +221,89 @@ namespace GpsSimulator
         {
             _gpsEngine.ClearWaypoints();
             _waypointsListBox.Items.Clear();
+        }
+        
+        private void ExportGpxButton_Click(object? sender, EventArgs e)
+        {
+            if (_gpsEngine.Waypoints.Count == 0)
+            {
+                MessageBox.Show("No waypoints to export. Please add some waypoints first.", "No Waypoints", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var saveFileDialog = new SaveFileDialog())
+            {
+                saveFileDialog.Filter = "GPX files (*.gpx)|*.gpx|All files (*.*)|*.*";
+                saveFileDialog.Title = "Export Waypoints as GPX";
+                saveFileDialog.DefaultExt = "gpx";
+                saveFileDialog.FileName = $"waypoints_{DateTime.Now:yyyyMMdd_HHmmss}.gpx";
+
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        var gpxContent = GenerateGpxContent();
+                        File.WriteAllText(saveFileDialog.FileName, gpxContent);
+                        MessageBox.Show($"GPX file exported successfully to:\n{saveFileDialog.FileName}", "Export Successful", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Failed to export GPX file:\n{ex.Message}", "Export Error", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+        
+        private string GenerateGpxContent()
+        {
+            var sb = new StringBuilder();
+            
+            // GPX header
+            sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+            sb.AppendLine("<gpx version=\"1.1\" creator=\"GPS Simulator\" xmlns=\"http://www.topografix.com/GPX/1/1\">");
+            
+            // Metadata
+            sb.AppendLine("  <metadata>");
+            sb.AppendLine($"    <name>GPS Simulator Waypoints</name>");
+            sb.AppendLine($"    <desc>Waypoints exported from GPS Simulator on {DateTime.Now:yyyy-MM-dd HH:mm:ss}</desc>");
+            sb.AppendLine($"    <time>{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}</time>");
+            sb.AppendLine("  </metadata>");
+            
+            // Waypoints
+            for (int i = 0; i < _gpsEngine.Waypoints.Count; i++)
+            {
+                var waypoint = _gpsEngine.Waypoints[i];
+                sb.AppendLine($"  <wpt lat=\"{waypoint.lat:F6}\" lon=\"{waypoint.lon:F6}\">");
+                sb.AppendLine($"    <name>Waypoint {i + 1}</name>");
+                sb.AppendLine($"    <desc>Generated waypoint {i + 1}</desc>");
+                sb.AppendLine("  </wpt>");
+            }
+            
+            // Track (route through all waypoints)
+            if (_gpsEngine.Waypoints.Count > 1)
+            {
+                sb.AppendLine("  <trk>");
+                sb.AppendLine("    <name>GPS Simulator Route</name>");
+                sb.AppendLine("    <desc>Route through all waypoints</desc>");
+                sb.AppendLine("    <trkseg>");
+                
+                foreach (var waypoint in _gpsEngine.Waypoints)
+                {
+                    sb.AppendLine($"      <trkpt lat=\"{waypoint.lat:F6}\" lon=\"{waypoint.lon:F6}\">");
+                    sb.AppendLine($"        <time>{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}</time>");
+                    sb.AppendLine("      </trkpt>");
+                }
+                
+                sb.AppendLine("    </trkseg>");
+                sb.AppendLine("  </trk>");
+            }
+            
+            sb.AppendLine("</gpx>");
+            
+            return sb.ToString();
         }
         
         private void SpeedTextBox_TextChanged(object? sender, EventArgs e)

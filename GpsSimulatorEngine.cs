@@ -25,6 +25,7 @@ namespace GpsSimulator
         public GpsData CurrentPosition => _currentPosition;
         public bool IsRunning => _isRunning;
         public double UpdateInterval { get; set; } = 1000; // ms
+        public IReadOnlyList<(double lat, double lon)> Waypoints => _waypoints;
         
         public GpsSimulatorEngine()
         {
