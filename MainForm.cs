@@ -55,11 +55,13 @@ namespace GpsSimulator
         
         private ListBox _waypointsListBox;
         private ListBox _networkLogListBox;
+        private ContextMenuStrip _waypointContextMenu;
         
         public MainForm()
         {
             InitializeComponent();
             InitializeGpsSimulator();
+            InitializeWaypointContextMenu();
         }
         
         private void InitializeGpsSimulator()
@@ -77,6 +79,97 @@ namespace GpsSimulator
             _displayTimer.Start();
             
             UpdateDisplay();
+        }
+        
+        private void InitializeWaypointContextMenu()
+        {
+            _waypointContextMenu = new ContextMenuStrip();
+            
+            var editMenuItem = new ToolStripMenuItem("Edit Waypoint");
+            editMenuItem.Click += EditWaypointMenuItem_Click;
+            
+            var deleteMenuItem = new ToolStripMenuItem("Delete Waypoint");
+            deleteMenuItem.Click += DeleteWaypointMenuItem_Click;
+            
+            _waypointContextMenu.Items.Add(editMenuItem);
+            _waypointContextMenu.Items.Add(deleteMenuItem);
+            
+            _waypointsListBox.ContextMenuStrip = _waypointContextMenu;
+            _waypointsListBox.MouseDown += WaypointsListBox_MouseDown;
+            _waypointsListBox.DoubleClick += WaypointsListBox_DoubleClick;
+        }
+        
+        private void WaypointsListBox_MouseDown(object? sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right)
+            {
+                var index = _waypointsListBox.IndexFromPoint(e.Location);
+                if (index != ListBox.NoMatches)
+                {
+                    _waypointsListBox.SelectedIndex = index;
+                }
+            }
+        }
+        
+        private void WaypointsListBox_DoubleClick(object? sender, EventArgs e)
+        {
+            EditSelectedWaypoint();
+        }
+        
+        private void EditWaypointMenuItem_Click(object? sender, EventArgs e)
+        {
+            EditSelectedWaypoint();
+        }
+        
+        private void EditSelectedWaypoint()
+        {
+            var selectedIndex = _waypointsListBox.SelectedIndex;
+            if (selectedIndex >= 0 && selectedIndex < _gpsEngine.Waypoints.Count)
+            {
+                var waypoint = _gpsEngine.Waypoints[selectedIndex];
+                
+                using (var editor = new WaypointEditorForm(waypoint.lat, waypoint.lon, selectedIndex))
+                {
+                    if (editor.ShowDialog(this) == DialogResult.OK)
+                    {
+                        if (editor.DeleteRequested)
+                        {
+                            // Delete the waypoint
+                            _gpsEngine.RemoveWaypoint(selectedIndex);
+                            _waypointsListBox.Items.RemoveAt(selectedIndex);
+                        }
+                        else
+                        {
+                            // Update the waypoint
+                            _gpsEngine.EditWaypoint(selectedIndex, editor.Latitude, editor.Longitude);
+                            
+                            // Update the display in the list box
+                            var (latDeg, latMin) = DecimalDegreesToDegreesMinutes(editor.Latitude);
+                            var (lonDeg, lonMin) = DecimalDegreesToDegreesMinutes(editor.Longitude);
+                            var latDir = editor.Latitude >= 0 ? "N" : "S";
+                            var lonDir = editor.Longitude >= 0 ? "E" : "W";
+                            
+                            _waypointsListBox.Items[selectedIndex] = $"{latDeg}° {latMin:F2}' {latDir}, {lonDeg}° {lonMin:F2}' {lonDir}";
+                        }
+                    }
+                }
+            }
+        }
+        
+        private void DeleteWaypointMenuItem_Click(object? sender, EventArgs e)
+        {
+            var selectedIndex = _waypointsListBox.SelectedIndex;
+            if (selectedIndex >= 0 && selectedIndex < _gpsEngine.Waypoints.Count)
+            {
+                var result = MessageBox.Show($"Are you sure you want to delete waypoint {selectedIndex + 1}?", 
+                    "Confirm Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                
+                if (result == DialogResult.Yes)
+                {
+                    _gpsEngine.RemoveWaypoint(selectedIndex);
+                    _waypointsListBox.Items.RemoveAt(selectedIndex);
+                }
+            }
         }
         
         private void OnPositionUpdated(object? sender, GpsData gpsData)
@@ -466,6 +559,7 @@ namespace GpsSimulator
                 _displayTimer?.Dispose();
                 _gpsEngine?.Dispose();
                 _networkService?.Dispose();
+                _waypointContextMenu?.Dispose();
             }
             base.Dispose(disposing);
         }

@@ -93,6 +93,38 @@ namespace GpsSimulator
             _waypoints.Add((latitude, longitude));
         }
         
+        public void EditWaypoint(int index, double latitude, double longitude)
+        {
+            if (index >= 0 && index < _waypoints.Count)
+            {
+                _waypoints[index] = (latitude, longitude);
+                
+                // If we're currently navigating to this waypoint or past it, reset the index
+                if (_currentWaypointIndex >= index && _waypoints.Count > 0)
+                {
+                    _currentWaypointIndex = Math.Min(_currentWaypointIndex, _waypoints.Count - 1);
+                }
+            }
+        }
+        
+        public void RemoveWaypoint(int index)
+        {
+            if (index >= 0 && index < _waypoints.Count)
+            {
+                _waypoints.RemoveAt(index);
+                
+                // Adjust current waypoint index if necessary
+                if (_currentWaypointIndex >= _waypoints.Count && _waypoints.Count > 0)
+                {
+                    _currentWaypointIndex = 0;
+                }
+                else if (_currentWaypointIndex >= index && _currentWaypointIndex > 0)
+                {
+                    _currentWaypointIndex--;
+                }
+            }
+        }
+        
         public void ClearWaypoints()
         {
             _waypoints.Clear();
